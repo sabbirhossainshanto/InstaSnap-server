@@ -3,20 +3,22 @@ import httpStatus from "http-status";
 import jwt, { type JwtPayload } from "jsonwebtoken";
 import config from "../../config";
 import AppError from "../../errors/AppError";
-
 import { USER_ROLE } from "../User/user.constant";
 import { User } from "../User/user.model";
 import { Types } from "mongoose";
 import { createToken } from "../../../utils/verifyJWT";
-import type { TLoginUser, TRegisterUser } from "./auth.interface";
+import type { TLoginUser } from "./auth.interface";
 import { sendEmail } from "../../../utils/sendEmail";
+import type { TUser } from "../User/user.interface";
 
-const registerUser = async (payload: TRegisterUser) => {
-  // checking if the user is exist
-  const user = await User.isUserExistsByEmail(payload?.email);
+const registerUser = async (payload: TUser) => {
+  const user = await User.findOne({ email: payload.email });
 
-  if (user) {
-    throw new AppError(httpStatus.NOT_FOUND, "This user is already exist!");
+  if (user?.email) {
+    throw new AppError(httpStatus.NOT_FOUND, "This email is already used!");
+  }
+  if (user?.userName) {
+    throw new AppError(httpStatus.NOT_FOUND, "This user name is already used!");
   }
 
   payload.role = USER_ROLE.USER;
@@ -24,22 +26,14 @@ const registerUser = async (payload: TRegisterUser) => {
   //create new user
   const newUser = await User.create(payload);
 
-  //create token and sent to the  client
-
   const jwtPayload = {
     _id: newUser._id as Types.ObjectId,
-    name: newUser.name,
+    fullName: newUser.fullName,
+    userName: newUser.userName,
     email: newUser.email,
-    mobileNumber: newUser.mobileNumber,
-    profilePhoto: newUser.profilePhoto,
     role: newUser.role,
     status: newUser.status,
     isVerified: newUser?.isVerified,
-    premiumStatus: newUser?.premiumStatus,
-    followers: newUser?.followers,
-    following: newUser?.following,
-    posts: newUser?.posts,
-    favorites: newUser?.favorites,
     createdAt: newUser?.createdAt,
     updatedAt: newUser?.updatedAt,
   };
@@ -63,45 +57,37 @@ const registerUser = async (payload: TRegisterUser) => {
 };
 const loginUser = async (payload: TLoginUser) => {
   // checking if the user is exist
-  const user = await User.isUserExistsByEmail(payload?.email);
+  const user = await User.findOne({ email: payload.email }).select("+password");
 
   if (!user) {
     throw new AppError(httpStatus.NOT_FOUND, "This user is not found!");
   }
-
-  // checking if the user is blocked
 
   const userStatus = user?.status;
 
   if (userStatus === "BLOCKED") {
     throw new AppError(httpStatus.FORBIDDEN, "This user is blocked!");
   }
-
-  //checking if the password is correct
-
-  if (!(await User.isPasswordMatched(payload?.password, user?.password)))
-    throw new AppError(httpStatus.FORBIDDEN, "Password do not matched");
-
-  //create token and sent to the  client
+  console.log(user);
+  const isPasswordMatched = await bcrypt.compare(
+    payload.password,
+    user.password
+  );
+  if (!isPasswordMatched) {
+    throw new Error("Password incorrect!");
+  }
 
   const jwtPayload = {
-    _id: user._id,
-    name: user.name,
+    _id: user._id as Types.ObjectId,
+    fullName: user.fullName,
+    userName: user.userName,
     email: user.email,
-    mobileNumber: user.mobileNumber,
-    profilePhoto: user.profilePhoto,
     role: user.role,
     status: user.status,
     isVerified: user?.isVerified,
-    premiumStatus: user?.premiumStatus,
-    followers: user?.followers,
-    following: user?.following,
-    posts: user?.posts,
-    favorites: user?.favorites,
     createdAt: user?.createdAt,
     updatedAt: user?.updatedAt,
   };
-
   const accessToken = createToken(
     jwtPayload,
     config.jwt_access_secret as string,
@@ -125,13 +111,11 @@ const changePassword = async (
   payload: { oldPassword: string; newPassword: string }
 ) => {
   // checking if the user is exist
-  const user = await User.isUserExistsByEmail(userData.email);
+  const user = await User.findOne(userData.email);
 
   if (!user) {
     throw new AppError(httpStatus.NOT_FOUND, "This user is not found!");
   }
-
-  // checking if the user is blocked
 
   const userStatus = user?.status;
 
@@ -139,10 +123,13 @@ const changePassword = async (
     throw new AppError(httpStatus.FORBIDDEN, "This user is blocked!");
   }
 
-  //checking if the password is correct
-
-  if (!(await User.isPasswordMatched(payload.oldPassword, user?.password)))
-    throw new AppError(httpStatus.FORBIDDEN, "Old Password do not matched");
+  const isPasswordMatched = await bcrypt.compare(
+    payload.oldPassword,
+    user.password
+  );
+  if (!isPasswordMatched) {
+    throw new Error("Password incorrect!");
+  }
 
   //hash new password
   const newHashedPassword = await bcrypt.hash(
@@ -174,7 +161,7 @@ const refreshToken = async (token: string) => {
   const { email, iat } = decoded;
 
   // checking if the user is exist
-  const user = await User.isUserExistsByEmail(email);
+  const user = await User.findOne(email);
 
   if (!user) {
     throw new AppError(httpStatus.NOT_FOUND, "This user is not found!");
@@ -187,21 +174,16 @@ const refreshToken = async (token: string) => {
     throw new AppError(httpStatus.FORBIDDEN, "This user is blocked!");
   }
 
-  if (
-    user.passwordChangedAt &&
-    User.isJWTIssuedBeforePasswordChanged(user.passwordChangedAt, iat as number)
-  ) {
-    throw new AppError(httpStatus.UNAUTHORIZED, "You are not authorized !");
-  }
-
   const jwtPayload = {
-    _id: user._id,
-    name: user.name,
+    _id: user._id as Types.ObjectId,
+    fullName: user.fullName,
+    userName: user.userName,
     email: user.email,
-    mobileNumber: user.mobileNumber,
-    profilePhoto: user.profilePhoto,
     role: user.role,
     status: user.status,
+    isVerified: user?.isVerified,
+    createdAt: user?.createdAt,
+    updatedAt: user?.updatedAt,
   };
 
   const accessToken = createToken(
@@ -223,18 +205,14 @@ const forgetPassword = async (email: string) => {
 
   const userData = {
     _id: user._id,
-    name: user.name,
+    fullName: user.fullName,
+    userName: user.userName,
     email: user.email,
     mobileNumber: user.mobileNumber,
     profilePhoto: user.profilePhoto,
     role: user.role,
     status: user.status,
     isVerified: user?.isVerified,
-    premiumStatus: user?.premiumStatus,
-    followers: user?.followers,
-    following: user?.following,
-    posts: user?.posts,
-    favorites: user?.favorites,
     createdAt: user?.createdAt,
     updatedAt: user?.updatedAt,
   };

@@ -1,17 +1,9 @@
 import jwt, { type JwtPayload, type Secret } from "jsonwebtoken";
-import { Types } from "mongoose";
-import type { USER_ROLE, USER_STATUS } from "../app/modules/User/user.constant";
 import AppError from "../app/errors/AppError";
+import type { TUser } from "../app/modules/User/user.interface";
 
 export const createToken = (
-  jwtPayload: {
-    _id?: Types.ObjectId;
-    name: string;
-    email: string;
-    mobileNumber?: string;
-    role: keyof typeof USER_ROLE;
-    status: keyof typeof USER_STATUS;
-  },
+  jwtPayload: Partial<TUser>,
   secret: string,
   expiresIn: any
 ) => {
