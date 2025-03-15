@@ -53,6 +53,14 @@ const userSchema = new Schema<TUser>(
       type: String,
       default: null,
     },
+    gender: {
+      type: String,
+      default: null,
+    },
+    website: {
+      type: String,
+      default: null,
+    },
     isVerified: {
       type: Boolean,
       default: false,
@@ -60,7 +68,12 @@ const userSchema = new Schema<TUser>(
   },
   {
     timestamps: true,
-    virtuals: true,
+    toJSON: {
+      virtuals: true,
+    },
+    toObject: {
+      virtuals: true,
+    },
   }
 );
 
@@ -78,6 +91,20 @@ userSchema.pre("save", async function (next) {
 userSchema.post("save", function (doc, next) {
   doc.password = "";
   next();
+});
+
+userSchema.virtual("followers", {
+  ref: "Follow",
+  localField: "_id", // The current user's ID
+  foreignField: "followingUser", // Users who are following this user
+  justOne: false, // Multiple followers
+});
+
+userSchema.virtual("followings", {
+  ref: "Follow",
+  localField: "_id", // The current user's ID
+  foreignField: "followerUser", // Users this user is following
+  justOne: false, // Multiple followings
 });
 
 export const User = model<TUser>("User", userSchema);

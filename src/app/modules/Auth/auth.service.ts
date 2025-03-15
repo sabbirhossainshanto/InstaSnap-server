@@ -36,6 +36,12 @@ const registerUser = async (payload: TUser) => {
     isVerified: newUser?.isVerified,
     createdAt: newUser?.createdAt,
     updatedAt: newUser?.updatedAt,
+    passwordChangedAt: newUser?.passwordChangedAt,
+    mobileNumber: newUser?.mobileNumber,
+    profilePhoto: newUser?.profilePhoto,
+    website: newUser?.website,
+    gender: newUser.gender,
+    bio: newUser?.bio,
   };
 
   const accessToken = createToken(
@@ -87,6 +93,12 @@ const loginUser = async (payload: TLoginUser) => {
     isVerified: user?.isVerified,
     createdAt: user?.createdAt,
     updatedAt: user?.updatedAt,
+    passwordChangedAt: user?.passwordChangedAt,
+    mobileNumber: user?.mobileNumber,
+    profilePhoto: user?.profilePhoto,
+    bio: user?.bio,
+    website: user?.website,
+    gender: user.gender,
   };
   const accessToken = createToken(
     jwtPayload,

@@ -4,7 +4,6 @@ import type { JwtPayload } from "jsonwebtoken";
 import config from "../config";
 import AppError from "../errors/AppError";
 import { USER_ROLE } from "../modules/User/user.constant";
-
 import { User } from "../modules/User/user.model";
 import { catchAsync } from "../../utils/catchAsync";
 import { verifyToken } from "../../utils/verifyJWT";
@@ -27,7 +26,7 @@ const auth = (...requiredRoles: (keyof typeof USER_ROLE)[]) => {
     const { role, email } = decoded;
 
     // checking if the user is exist
-    const user = await User.isUserExistsByEmail(email);
+    const user = await User.findOne({ email });
 
     if (!user) {
       throw new AppError(httpStatus.NOT_FOUND, "This user is not found !");

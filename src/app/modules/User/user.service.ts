@@ -1,50 +1,62 @@
-import type { JwtPayload } from "jsonwebtoken";
-
-import { UserSearchableFields } from "./user.constant";
-
 import { User } from "./user.model";
-import AppError from "../../errors/AppError";
-import httpStatus from "http-status";
 import type { TUser } from "./user.interface";
-import { QueryBuilder } from "../../builder/QueryBuilder";
-
-const createUser = async (payload: TUser) => {
-  const user = await User.create(payload);
-
-  return user;
-};
+import QueryBuilder from "../../builder/QueryBuilder";
 
 const getAllUsersFromDB = async (
   query: Record<string, unknown>,
-  user: JwtPayload
+  user: TUser
 ) => {
-  const users = new QueryBuilder(
+  const userQuery = new QueryBuilder(
     User.find({ _id: { $ne: user?._id } })
-      .populate("followers")
-      .populate("following")
-      .populate("posts")
-      .populate("favorites"),
+      .populate({
+        path: "followers",
+        populate: {
+          path: "followerUser",
+        },
+      })
+      .populate({
+        path: "followings",
+        populate: {
+          path: "followingUser",
+        },
+      })
+      .lean(),
     query
   )
-    .fields()
-    .paginate()
-    .sort()
+    .search([])
     .filter()
-    .search(UserSearchableFields);
+    .sort()
+    .paginate()
+    .fields();
 
-  const result = await users.modelQuery;
+  const meta = await userQuery.countTotal();
+  const result = await userQuery.modelQuery;
+
+  return {
+    meta,
+    result,
+  };
+};
+
+const getSingleUserFromDB = async (username: string) => {
+  const result = await User.findOne({ userName: username })
+    .populate({
+      path: "followers",
+      populate: {
+        path: "followerUser",
+      },
+    })
+    .populate({
+      path: "followings",
+      populate: {
+        path: "followingUser",
+      },
+    });
 
   return result;
 };
 
-const getSingleUserFromDB = async (id: string) => {
-  const user = await User.findById(id);
-
-  return user;
-};
-
 export const UserServices = {
-  createUser,
   getAllUsersFromDB,
   getSingleUserFromDB,
 };

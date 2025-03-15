@@ -3,30 +3,23 @@ import { UserServices } from "./user.service";
 import { catchAsync } from "../../../utils/catchAsync";
 import sendResponse from "../../../utils/sendResponse";
 
-const userRegister = catchAsync(async (req, res) => {
-  const user = await UserServices.createUser(req.body);
-
-  sendResponse(res, {
-    success: true,
-    statusCode: httpStatus.OK,
-    message: "User Created Successfully",
-    data: user,
-  });
-});
-
 const getAllUsers = catchAsync(async (req, res) => {
-  const users = await UserServices.getAllUsersFromDB(req.query, req.user);
+  const { meta, result } = await UserServices.getAllUsersFromDB(
+    req.query,
+    req.user
+  );
 
   sendResponse(res, {
     success: true,
     statusCode: httpStatus.OK,
     message: "Users Retrieved Successfully",
-    data: users,
+    data: result,
+    meta,
   });
 });
 
 const getSingleUser = catchAsync(async (req, res) => {
-  const user = await UserServices.getSingleUserFromDB(req.params.id);
+  const user = await UserServices.getSingleUserFromDB(req.params.user);
 
   sendResponse(res, {
     success: true,
@@ -38,6 +31,5 @@ const getSingleUser = catchAsync(async (req, res) => {
 
 export const UserControllers = {
   getSingleUser,
-  userRegister,
   getAllUsers,
 };

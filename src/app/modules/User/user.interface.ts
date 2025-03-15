@@ -14,6 +14,10 @@ export type TUser = {
   profilePhoto?: string;
   bio?: string;
   isVerified: boolean;
+  gender: "male" | "female" | "other";
+  website?: string;
   createdAt?: Date;
   updatedAt?: Date;
+  followers?: Types.ObjectId[]; // Virtual field
+  following?: Types.ObjectId[]; // Virtual field
 };

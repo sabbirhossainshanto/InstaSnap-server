@@ -1,84 +1,82 @@
 import { type FilterQuery, Query } from "mongoose";
 
-export class QueryBuilder<T> {
-  public query: Record<string, unknown>; //payload
+class QueryBuilder<T> {
   public modelQuery: Query<T[], T>;
+  public query: Record<string, unknown>;
 
   constructor(modelQuery: Query<T[], T>, query: Record<string, unknown>) {
-    this.query = query;
     this.modelQuery = modelQuery;
+    this.query = query;
   }
 
   search(searchableFields: string[]) {
-    let searchTerm = "";
-
-    if (this.query?.searchTerm) {
-      searchTerm = this.query.searchTerm as string;
+    const searchTerm = this?.query?.searchTerm;
+    if (searchTerm) {
+      this.modelQuery = this.modelQuery.find({
+        $or: searchableFields.map(
+          (field) =>
+            ({
+              [field]: { $regex: searchTerm, $options: "i" },
+            } as FilterQuery<T>)
+        ),
+      });
     }
 
-    this.modelQuery = this.modelQuery.find({
-      $or: searchableFields.map(
-        (field) =>
-          ({
-            [field]: new RegExp(searchTerm, "i"),
-          } as FilterQuery<T>)
-      ),
-    });
-
-    return this;
-  }
-
-  paginate() {
-    let limit: number = Number(this.query?.limit || 10);
-    let skip: number = 0;
-
-    if (this.query?.page) {
-      const page: number = Number(this.query?.page || 1);
-      skip = Number((page - 1) * limit);
-    }
-
-    this.modelQuery = this.modelQuery.skip(skip).limit(limit);
-    return this;
-  }
-
-  sort() {
-    let sort = "-createdAt"; // Default sorting by creation date
-
-    // Check if sorting by upvotes is requested
-    if (this.query?.sort) {
-      sort = this.query.sort as string;
-      if (this.query?.sort === "upvotes" || this.query?.sort === "downvotes") {
-        this.modelQuery = this.modelQuery.sort({ sort: -1 }); // Sort by virtual field
-      } else {
-        this.modelQuery = this.modelQuery.sort(sort);
-      }
-    } else {
-      // Fallback to sorting by creation date
-      this.modelQuery = this.modelQuery.sort(sort);
-    }
-
-    return this;
-  }
-
-  fields() {
-    let fields = "";
-
-    if (this.query?.fields) {
-      fields = (this.query?.fields as string).split(",").join(" ");
-    }
-
-    this.modelQuery = this.modelQuery.select(fields);
     return this;
   }
 
   filter() {
-    const queryObj = { ...this.query };
-    const excludeFields = ["searchTerm", "page", "limit", "sortBy", "fields"];
+    const queryObj = { ...this.query }; // copy
 
-    excludeFields.forEach((e) => delete queryObj[e]);
+    // Filtering
+    const excludeFields = ["searchTerm", "sort", "limit", "page", "fields"];
+
+    excludeFields.forEach((el) => delete queryObj[el]);
 
     this.modelQuery = this.modelQuery.find(queryObj as FilterQuery<T>);
 
     return this;
   }
+
+  sort() {
+    const sort =
+      (this?.query?.sort as string)?.split(",")?.join(" ") || "-createdAt";
+    this.modelQuery = this.modelQuery.sort(sort as string);
+
+    return this;
+  }
+
+  paginate() {
+    const page = Number(this?.query?.page) || 1;
+    const limit = Number(this?.query?.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    this.modelQuery = this.modelQuery.skip(skip).limit(limit);
+
+    return this;
+  }
+
+  fields() {
+    const fields =
+      (this?.query?.fields as string)?.split(",")?.join(" ") || "-__v";
+
+    this.modelQuery = this.modelQuery.select(fields);
+    return this;
+  }
+  async countTotal() {
+    const totalQueries = this.modelQuery.getFilter();
+    const total = await this.modelQuery.model.countDocuments(totalQueries);
+    const page = Number(this?.query?.page) || 1;
+    const limit = Number(this?.query?.limit) || 10;
+    const totalPage = Math.ceil(total / limit);
+
+    return {
+      page,
+      limit,
+      total,
+      totalPage,
+    };
+  }
 }
+
+export default QueryBuilder;
