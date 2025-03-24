@@ -1,9 +1,10 @@
 import express, { type Application } from "express";
-const app: Application = express();
+// const app: Application = express();
 import cors from "cors";
 import router from "./app/routes";
 import globalErrorHandler from "./app/middlewares/globalErrorHandler";
 import notFound from "./app/middlewares/notFound";
+import { app } from "./utils/socket";
 
 //  parser
 app.use(cors());

@@ -19,12 +19,35 @@ const createPost = catchAsync(async (req, res) => {
 });
 
 const getAllPost = catchAsync(async (req, res) => {
-  const result = await postService.getAllPost();
+  const result = await postService.getAllPost(req.user);
 
   sendResponse(res, {
     success: true,
     statusCode: httpStatus.OK,
-    message: "Posts are Successfully",
+    message: "Posts are retrieved Successfully",
+    data: result,
+  });
+});
+const getSinglePost = catchAsync(async (req, res) => {
+  const result = await postService.getSinglePost(req.params.postId);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: "Post is retrieve Successfully",
+    data: result,
+  });
+});
+const addLikeToPost = catchAsync(async (req, res) => {
+  const { message, result } = await postService.addLikeToPost(
+    req.body,
+    req.user
+  );
+
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message,
     data: result,
   });
 });
@@ -32,4 +55,6 @@ const getAllPost = catchAsync(async (req, res) => {
 export const postController = {
   createPost,
   getAllPost,
+  addLikeToPost,
+  getSinglePost,
 };

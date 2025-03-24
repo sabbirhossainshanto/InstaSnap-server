@@ -38,8 +38,8 @@ const getAllUsersFromDB = async (
   };
 };
 
-const getSingleUserFromDB = async (username: string) => {
-  const result = await User.findOne({ userName: username })
+const getSingleUserFromDB = async (user: string) => {
+  const result = await User.findOne({ userName: user })
     .populate({
       path: "followers",
       populate: {

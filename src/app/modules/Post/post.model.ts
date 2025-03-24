@@ -35,5 +35,10 @@ const postSchema = new Schema<TPost>(
     },
   }
 );
-
+postSchema.virtual("comments", {
+  ref: "Comment",
+  localField: "_id",
+  foreignField: "post",
+  justOne: false,
+});
 export const Post = model<TPost>("Post", postSchema);

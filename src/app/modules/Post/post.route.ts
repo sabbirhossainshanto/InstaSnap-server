@@ -23,5 +23,15 @@ router.get(
   auth(USER_ROLE.USER, USER_ROLE.ADMIN),
   postController.getAllPost
 );
+router.get(
+  "/:postId",
+  auth(USER_ROLE.USER, USER_ROLE.ADMIN),
+  postController.getSinglePost
+);
+router.put(
+  "/like",
+  auth(USER_ROLE.USER, USER_ROLE.ADMIN),
+  postController.addLikeToPost
+);
 
 export const postRoutes = router;

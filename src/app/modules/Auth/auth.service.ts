@@ -12,12 +12,13 @@ import { sendEmail } from "../../../utils/sendEmail";
 import type { TUser } from "../User/user.interface";
 
 const registerUser = async (payload: TUser) => {
-  const user = await User.findOne({ email: payload.email });
+  const isSameEmail = await User.findOne({ email: payload.email });
 
-  if (user?.email) {
+  if (isSameEmail) {
     throw new AppError(httpStatus.NOT_FOUND, "This email is already used!");
   }
-  if (user?.userName) {
+  const isSameUserName = await User.findOne({ userName: payload.userName });
+  if (isSameUserName) {
     throw new AppError(httpStatus.NOT_FOUND, "This user name is already used!");
   }
 
